@@ -1,0 +1,10 @@
+{
+ "groups": {
+  "A": {"place": "Opening"},
+  "B": {"place": "Middle"}
+ },
+ "takes": {
+  "A1": {"label": "wide, first try"},
+  "B2": {"label": "close-up", "note": "best take"}
+ }
+}

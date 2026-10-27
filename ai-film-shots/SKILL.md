@@ -48,7 +48,7 @@ Things that bite:
 
 ## Rendering and delivering a cut
 
-1. Get the edit list as CSV with columns `order,take,beat,in_s,out_s,...` (an edit bench export, or write it with the user).
+1. Get the edit list as CSV with columns `order,take,group,in_s,out_s,...`. The repository's `edit-bench/index.html` lets the user build it: they open their folder of previews, pick and trim takes, and click Download CSV. Or write the CSV with the user.
 2. Name the masters `<take>_4K.mp4` in one folder.
 3. `MIRROR="TAKE1 TAKE2" SIZE=5026x2160 scripts/render_cut.sh cut.csv masters/ out/ prores` gives `out/shots/NN_<take>.mov` and `out/cut.mov`. Use `h264` for a 4K MP4 or `preview` for a small copy to email.
 4. Check the cut's length against the CSV total and look at a contact sheet of it.

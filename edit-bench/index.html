@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Edit Bench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an editing bench. Player and proportional timeline on top, the edit list (any clip, any order, trimmed) and the trim viewer beside it, the clip library below. Single dark look, deliberate. */
+:root{
+  --bg:#121110; --panel:#1b1a18; --raise:#252320; --line:#34312c;
+  --fg:#ece6da; --dim:#a59d8f; --faint:#6f685d;
+  --torch:#e0a24a; --torch-dim:#5a4321; --moon:#8fa7bf; --moon-dim:#2b3640; --bad:#d9826b;
+  --display:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:14px;line-height:1.45;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:22px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(26px,4vw,36px);margin:0;letter-spacing:.01em}
+h2{font-family:var(--display);font-weight:600;font-size:22px;margin:0}
+.sub{color:var(--dim);margin:0;max-width:66ch}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--torch)}
+.panel{display:grid;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.screen{position:relative;width:100%;aspect-ratio:2.296;background:#000;border-radius:6px;overflow:hidden}
+.screen video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+.screen video.off{visibility:hidden}
+.slate{position:absolute;left:10px;top:10px;font-family:var(--mono);font-size:12px;background:rgba(0,0,0,.6);padding:3px 8px;border-radius:4px;pointer-events:none}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:inherit;font-weight:500;color:var(--fg);background:var(--raise);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer;touch-action:manipulation}
+button:hover{border-color:var(--faint)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--torch);outline-offset:2px}
+button.primary{background:var(--torch);border-color:var(--torch);color:#1a1206}
+button.sm{padding:4px 8px;font-size:12px}
+button[disabled]{opacity:.4;cursor:default}
+.tc{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--dim)}
+.push{margin-left:auto}
+.timeline{position:relative;display:flex;height:38px;border-radius:5px;overflow:hidden;background:var(--bg);border:1px solid var(--line);cursor:pointer}
+.timeline .empty{margin:auto;color:var(--faint);font-size:12px}
+.seg{position:relative;min-width:0;border-right:1px solid var(--bg);background:var(--raise);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--dim);overflow:hidden;white-space:nowrap}
+.seg.now{background:var(--torch-dim);color:var(--fg)}
+.seg.sel{box-shadow:inset 0 -3px 0 var(--moon)}
+.head{position:absolute;top:0;bottom:0;width:2px;background:var(--torch);left:0;pointer-events:none}
+.bench{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:860px){.bench{grid-template-columns:1fr}}
+.list{display:grid;gap:6px;max-height:560px;overflow:auto;padding-right:2px}
+.row{display:grid;grid-template-columns:22px 72px minmax(0,1fr) auto;gap:8px;align-items:center;background:var(--raise);border:1px solid var(--line);border-radius:7px;padding:5px}
+.row.sel{border-color:var(--moon);box-shadow:inset 0 0 0 1px var(--moon)}
+.row.now{border-color:var(--torch)}
+.row.drop{border-top:2px solid var(--torch)}
+.row .n{font-family:var(--mono);font-size:11px;color:var(--faint);text-align:center;cursor:grab}
+.row img{width:72px;aspect-ratio:2.296;object-fit:cover;border-radius:3px;display:block;background:#000;cursor:pointer}
+.row .t{min-width:0;cursor:pointer}
+.row .t b{font-family:var(--mono);font-weight:500;font-size:13px}
+.row .t span{display:block;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .t code{font-family:var(--mono);font-size:11px;color:var(--moon)}
+.row .b{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.row .b button{padding:3px 7px;font-size:12px;min-width:28px}
+@media (max-width:520px){.row{grid-template-columns:18px 56px minmax(0,1fr)}.row img{width:56px}.row .b{grid-column:1/-1;justify-content:flex-start}}
+.hint{color:var(--faint);font-size:12px;margin:0}
+.trim video{width:100%;height:auto;aspect-ratio:2.296;background:#000;border-radius:6px;display:block}
+.rng{display:grid;grid-template-columns:42px minmax(0,1fr) 74px;gap:8px;align-items:center}
+.rng label{font-family:var(--mono);font-size:12px;color:var(--dim)}
+.rng input[type=range]{width:100%;accent-color:var(--torch)}
+.rng.out input[type=range]{accent-color:var(--moon)}
+.rng output{font-family:var(--mono);font-size:12px;text-align:right}
+.bar{position:relative;height:10px;background:var(--bg);border:1px solid var(--line);border-radius:5px}
+.bar i{position:absolute;top:0;bottom:0;background:var(--torch-dim);border-left:2px solid var(--torch);border-right:2px solid var(--moon)}
+.bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--fg)}
+.beat{display:grid;gap:8px}
+.beat-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px}
+.beat-h .place{color:var(--dim)}
+.strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity}
+.card{flex:0 0 172px;display:grid;gap:6px;align-content:start;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px;scroll-snap-align:start}
+.card.k4on{border-color:var(--moon)}
+.card img{width:100%;aspect-ratio:2.296;object-fit:cover;border-radius:4px;display:block;background:#000}
+.card .r{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.card .id{font-family:var(--mono);font-weight:500;font-size:13px}
+.card .d{font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:auto}
+.chip{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:1px 5px;border-radius:3px;background:var(--torch-dim);color:var(--torch)}
+.chip.in{background:var(--moon-dim);color:var(--moon)}
+.card .lab{font-size:12px;color:var(--dim);line-height:1.3}
+.card .note{font-size:11px;color:var(--moon);line-height:1.3}
+.card .acts{display:flex;gap:6px;flex-wrap:wrap}
+.card .k4[aria-pressed="true"]{background:var(--moon);border-color:var(--moon);color:#0f1418}
+.k4list{display:flex;flex-wrap:wrap;gap:6px}
+.pk{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;background:var(--raise);border:1px solid var(--line);border-radius:5px;padding:3px 4px 3px 8px}
+.pk button{padding:0 6px;font-size:13px;line-height:20px;border:0;background:transparent;color:var(--dim)}
+.sync{font-family:var(--mono);font-size:12px;color:var(--faint)}
+.sync.ok{color:var(--moon)}.sync.err{color:var(--bad)}
+.toast{font-family:var(--mono);font-size:12px;color:var(--torch);min-height:1em}
+#vname{flex:1 1 220px;min-width:0;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 10px}
+.btnlike{font-weight:500;color:var(--fg);background:var(--raise);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer}
+.vlist{display:grid;gap:6px}
+.vrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;background:var(--raise);border:1px solid var(--line);border-radius:7px;padding:6px 8px}
+.vrow b{font-weight:500}.vrow span{display:block;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.vrow .b{display:flex;gap:4px}
+.vrow button.warn{border-color:var(--bad);color:var(--bad)}
+details summary{cursor:pointer;font-family:var(--display);font-weight:600;font-size:22px}
+</style>
+<style>
+.drop{border:1px dashed var(--faint);border-radius:10px;padding:22px 16px;text-align:center;color:var(--dim)}
+.drop.over{border-color:var(--torch);color:var(--fg);background:var(--raise)}
+.drop b{color:var(--fg)}
+.miss{opacity:.45}
+.row .t .warn{color:var(--bad)}
+select{font:inherit;color:var(--fg);background:var(--raise);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+.card img,.row img{background:#000 linear-gradient(135deg,#1b1a18,#252320)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Edit bench · runs in your browser, nothing is uploaded</div>
+      <h1>Build a cut from your takes</h1>
+    </div>
+    <p class="sub">Open the folder of takes, add any take in any order, trim each one to the frame, play the cut end to end, and export an EDL or CSV for the online edit.</p>
+  </header>
+
+  <section class="panel" aria-label="Clips">
+    <div class="drop" id="drop">
+      <p style="margin:0 0 10px"><b>Drop a folder or video files here</b>, or</p>
+      <div class="controls" style="justify-content:center">
+        <label class="btnlike primary" for="pickDir" style="background:var(--torch);border-color:var(--torch);color:#1a1206;padding:7px 12px;font-size:14px">Open folder</label><input id="pickDir" type="file" webkitdirectory multiple hidden>
+        <label class="btnlike" for="pickFiles" style="padding:7px 12px;font-size:14px">Add video files</label><input id="pickFiles" type="file" accept="video/*,.mov,.mp4,.m4v,.webm,.json" multiple hidden>
+        <label class="tc" for="fps">fps</label><select id="fps"><option>23.976</option><option selected>24</option><option>25</option><option>29.97</option><option>30</option></select>
+      </div>
+      <p class="hint" style="margin:10px 0 0">Takes are grouped by subfolder, or by the letters their file name starts with (A1, A2 … → A). An optional <code>bench.json</code> in the folder can name groups and describe takes. Browsers play MP4 (H.264) and, in Safari, MOV; make light previews of ProRes first.</p>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+  </section>
+
+  <section class="panel" aria-label="Player">
+    <div class="screen"><video id="va" playsinline preload="auto"></video><video id="vb" class="off" playsinline preload="auto"></video><div class="slate" id="slate">—</div></div>
+    <div class="timeline" id="tl" title="Click a segment to play from there"><div class="head" id="head"></div></div>
+    <div class="controls">
+      <button class="primary" id="play">Play cut</button>
+      <button id="pause">Pause</button>
+      <button id="fromSel">Play from selected</button>
+      <span class="tc push" id="tc">00:00.00 / 00:00.00</span>
+    </div>
+    <div class="controls">
+      <button class="sm" id="loadAll">Add every take in order</button>
+      <button class="sm" id="clear">Clear</button>
+      <button class="sm" id="copy">Copy edit list</button>
+      <button class="sm" id="dlEdl">Download EDL</button>
+      <button class="sm" id="dlCsv">Download CSV</button>
+      <span class="sync push" id="sync">Saved in this browser</span>
+    </div>
+  </section>
+
+  <div class="bench">
+    <section class="panel" aria-label="Edit list">
+      <div class="controls"><h2>Edit list</h2><span class="tc push" id="count">0 clips</span></div>
+      <div class="list" id="list"></div>
+      <p class="hint">Drag a row by its number, or use ↑ ↓. ⧉ duplicates a row, so one take can appear twice with different trims.</p>
+    </section>
+    <section class="panel trim" aria-label="Trim">
+      <div class="controls"><h2>Trim</h2><span class="tc push" id="trimId">select a row</span></div>
+      <video id="tv" playsinline controls preload="auto"></video>
+      <div class="bar"><i id="barSel"></i><b id="barHead"></b></div>
+      <div class="rng"><label for="inR">In</label><input type="range" id="inR" min="0" max="1" step="0.001" value="0"><output id="inO">0.00</output></div>
+      <div class="controls">
+        <button class="sm" data-n="in,-1">In −1f</button><button class="sm" data-n="in,1">In +1f</button>
+        <button class="sm" id="inHere">In = playhead</button>
+      </div>
+      <div class="rng out"><label for="outR">Out</label><input type="range" id="outR" min="0" max="1" step="0.001" value="1"><output id="outO">0.00</output></div>
+      <div class="controls">
+        <button class="sm" data-n="out,-1">Out −1f</button><button class="sm" data-n="out,1">Out +1f</button>
+        <button class="sm" id="outHere">Out = playhead</button>
+      </div>
+      <div class="controls">
+        <button class="sm" id="playTrim">Play trimmed</button>
+        <button class="sm" id="resetTrim">Full length</button>
+        <span class="tc push" id="trimLen">—</span>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" aria-label="Versions">
+    <div class="controls"><h2>Versions</h2><span class="hint push">The current edit saves itself in this browser. Save named versions, or a project file to move the edit to another computer.</span></div>
+    <div class="controls">
+      <input id="vname" type="text" maxlength="80" placeholder="Name this version" aria-label="Version name">
+      <button class="sm primary" id="vsave">Save version</button>
+      <button class="sm" id="pjDl">Download project file</button>
+      <label class="sm btnlike" for="pjIn">Open project file</label><input id="pjIn" type="file" accept=".json,application/json" hidden>
+    </div>
+    <div class="vlist" id="vlist"></div>
+  </section>
+
+  <section class="panel" aria-label="Library">
+    <div class="controls"><h2>Library</h2><span class="hint push" id="libHint">“Add” puts the take after the selected row, or at the end.</span></div>
+    <div id="beats" style="display:grid;gap:22px;min-width:0"></div>
+  </section>
+</div>
+<script>
+// ---------- state ----------
+let FPS=24; const q=t=>Math.round(t*FPS)/FPS; const FR=()=>1/FPS;
+const $=s=>document.querySelector(s);
+const f2=t=>(Math.max(0,t)).toFixed(2);
+const fmt=t=>{t=Math.max(0,t);const m=Math.floor(t/60),s=t-m*60;return String(m).padStart(2,'0')+':'+s.toFixed(2).padStart(5,'0')};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let CLIP={};          // id -> {id,name,url,dur,group,label,note,thumb}
+let ORDER=[];         // group names in display order
+let META={groups:{},takes:{}};
+let uidN=1;const mk=(id,i,o,d)=>({u:uidN++,id,in:i??0,out:o??(CLIP[id]?CLIP[id].dur:(d||0))});
+let seq=[],sel=null,playing=false,idx=-1,pl=[];
+const dur=id=>CLIP[id]?CLIP[id].dur:Infinity;
+const len=x=>Math.max(0,x.out-x.in);
+const total=()=>seq.reduce((a,x)=>a+len(x),0);
+const have=id=>!!(CLIP[id]&&CLIP[id].url);
+let tt;function toast(m){$('#toast').textContent=m;clearTimeout(tt);tt=setTimeout(()=>$('#toast').textContent='',3500)}
+const plain=()=>seq.map(x=>({id:x.id,in:+x.in.toFixed(3),out:+x.out.toFixed(3)}));
+function valid(a){return Array.isArray(a)?a.filter(x=>x&&x.id).map(x=>{const d=dur(x.id);const i=Math.max(0,+x.in||0);const o=Math.min(d,Math.max(i+0.001,x.out==null?d:+x.out));return mk(String(x.id),i,o)}):[]}
+function saveLocal(){try{localStorage.setItem('benchEdit',JSON.stringify({fps:FPS,items:plain()}))}catch(e){}}
+function changed(){saveLocal();renderAll()}
+try{const s=JSON.parse(localStorage.getItem('benchEdit')||'null');if(s){FPS=+s.fps||24;seq=valid(s.items)}}catch(e){}
+$('#fps').value=String(FPS);
+$('#fps').addEventListener('change',e=>{FPS=+e.target.value;saveLocal();renderAll();paintTrim()});
+
+// ---------- loading clips ----------
+const isVid=f=>/\.(mp4|m4v|mov|webm|mkv)$/i.test(f.name)||/^video\//.test(f.type);
+const prefix=n=>{const m=n.match(/^([A-Za-z]+)[ _-]?\d/);return m?m[1].toUpperCase():''};
+function probe(url){return new Promise(res=>{const v=document.createElement('video');v.preload='metadata';v.muted=true;v.src=url;let done=false;
+  const fin=(d,th)=>{if(done)return;done=true;v.removeAttribute('src');v.load();res({dur:d,thumb:th})};
+  v.onerror=()=>fin(NaN,'');setTimeout(()=>fin(v.duration||NaN,''),15000);
+  v.onloadedmetadata=()=>{const d=v.duration;v.currentTime=Math.min(1,d/3)};
+  v.onseeked=()=>{try{const c=document.createElement('canvas');c.width=240;c.height=Math.round(240*(v.videoHeight||1)/(v.videoWidth||2.4))||104;c.getContext('2d').drawImage(v,0,0,c.width,c.height);fin(v.duration,c.toDataURL('image/jpeg',.7))}catch(e){fin(v.duration,'')}}})}
+async function readMeta(f){try{const j=JSON.parse(await f.text());
+  if(Array.isArray(j)){j.forEach(s=>{(s.opts||s.takes||[]).forEach(o=>{META.takes[o.id]={group:s.name,label:o.label,note:o.note}});META.groups[s.name]={place:s.place||''}})}
+  else{Object.assign(META.groups,j.groups||{});Object.assign(META.takes,j.takes||{})}
+  toast('Read '+f.name)}catch(e){toast(f.name+' is not valid JSON')}}
+async function addFiles(list){
+  const files=[...list];const js=files.filter(f=>/\.json$/i.test(f.name)&&/bench|slots|takes/i.test(f.name));for(const f of js)await readMeta(f);
+  const vids=files.filter(isVid).sort((a,b)=>(a.webkitRelativePath||a.name).localeCompare(b.webkitRelativePath||b.name,undefined,{numeric:true}));
+  if(!vids.length){if(!js.length)toast('No video files found');renderAll();return}
+  toast(`Reading ${vids.length} clip${vids.length>1?'s':''}…`);
+  let n=0;const work=vids.slice();
+  async function worker(){while(work.length){const f=work.shift();const id=f.name.replace(/\.[^.]+$/,'');
+    const parts=(f.webkitRelativePath||'').split('/');const sub=parts.length>2?parts[parts.length-2]:'';
+    const m=META.takes[id]||{};const group=m.group||sub||prefix(id)||'Clips';
+    if(CLIP[id]&&CLIP[id].url)URL.revokeObjectURL(CLIP[id].url);
+    const url=URL.createObjectURL(f);const p=await probe(url);
+    if(!isFinite(p.dur)){URL.revokeObjectURL(url);toast(`${f.name}: this browser can't play it`);continue}
+    CLIP[id]={id,name:f.name,url,dur:p.dur,group,label:m.label||'',note:m.note||'',thumb:p.thumb};
+    if(!ORDER.includes(group))ORDER.push(group);n++;if(n%6===0)renderBeats()}}
+  await Promise.all([worker(),worker(),worker()]);
+  seq=valid(seq.map(x=>({id:x.id,in:x.in,out:x.out})));
+  renderAll();loadTrim();toast(`${n} clip${n===1?'':'s'} ready`)}
+$('#pickDir').addEventListener('change',e=>{addFiles(e.target.files);e.target.value=''});
+$('#pickFiles').addEventListener('change',e=>{addFiles(e.target.files);e.target.value=''});
+const drop=$('#drop');
+['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{if(ev==='dragleave'&&e.relatedTarget)return;drop.classList.remove('over')}));
+document.addEventListener('drop',async e=>{e.preventDefault();const out=[];
+  const walk=(en,path)=>new Promise(res=>{if(en.isFile)en.file(f=>{try{Object.defineProperty(f,'webkitRelativePath',{value:path+f.name})}catch(_){}out.push(f);res()},()=>res());
+    else if(en.isDirectory){const r=en.createReader();const all=[];const rd=()=>r.readEntries(async es=>{if(!es.length){for(const c of all)await walk(c,path+en.name+'/');res()}else{all.push(...es);rd()}},()=>res());rd()}else res()});
+  const items=[...(e.dataTransfer.items||[])].map(i=>i.webkitGetAsEntry&&i.webkitGetAsEntry()).filter(Boolean);
+  if(items.length){for(const en of items)await walk(en,'');addFiles(out)}else addFiles(e.dataTransfer.files)});
+
+// ---------- edit list ----------
+let dragU=null;
+function renderList(){const L=$('#list');L.innerHTML='';
+  seq.forEach((x,i)=>{const o=CLIP[x.id];const r=document.createElement('div');r.className='row'+(x.u===sel?' sel':'')+(have(x.id)?'':' miss');r.draggable=true;r.dataset.u=x.u;
+    const trimmed=o&&(x.in>0.001||x.out<o.dur-0.001);
+    r.innerHTML=`<div class="n" title="Drag to reorder">${i+1}</div><img src="${o&&o.thumb?o.thumb:''}" alt=""><div class="t"><b>${esc(x.id)}</b> <code>${f2(x.in)}–${f2(x.out)} · ${f2(len(x))} s${trimmed?' ✂':''}</code><span>${o?esc(o.group+(o.label?' — '+o.label:'')):'<span class="warn">missing: open its folder again</span>'}</span></div><div class="b"><button type="button" data-a="up" aria-label="Move up">↑</button><button type="button" data-a="down" aria-label="Move down">↓</button><button type="button" data-a="dup" aria-label="Duplicate">⧉</button><button type="button" data-a="del" aria-label="Remove">✕</button></div>`;
+    r.querySelector('.t').addEventListener('click',()=>select(x.u));r.querySelector('img').addEventListener('click',()=>select(x.u));
+    r.querySelector('.b').addEventListener('click',e=>{const a=e.target.dataset.a;if(!a)return;const k=seq.findIndex(y=>y.u===x.u);
+      if(a==='up'&&k>0)[seq[k-1],seq[k]]=[seq[k],seq[k-1]];
+      if(a==='down'&&k<seq.length-1)[seq[k+1],seq[k]]=[seq[k],seq[k+1]];
+      if(a==='dup'){const c=mk(x.id,x.in,x.out);seq.splice(k+1,0,c);sel=c.u}
+      if(a==='del'){seq.splice(k,1);if(sel===x.u)sel=null}
+      stop();changed();loadTrim()});
+    r.addEventListener('dragstart',e=>{dragU=x.u;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',String(x.u))}catch(_){}});
+    r.addEventListener('dragover',e=>{if(dragU==null)return;e.preventDefault();e.stopPropagation();r.classList.add('drop')});
+    r.addEventListener('dragleave',()=>r.classList.remove('drop'));
+    r.addEventListener('drop',e=>{if(dragU==null)return;e.preventDefault();e.stopPropagation();r.classList.remove('drop');if(dragU===x.u){dragU=null;return}const from=seq.findIndex(y=>y.u===dragU);const it=seq.splice(from,1)[0];const to=seq.findIndex(y=>y.u===x.u);seq.splice(to,0,it);dragU=null;stop();changed()});
+    L.appendChild(r)});
+  if(!seq.length){const p=document.createElement('p');p.className='hint';p.textContent='Empty. Open a folder of takes, then add takes from the library below.';L.appendChild(p)}
+  const miss=seq.filter(x=>!have(x.id)).length;
+  $('#count').textContent=`${seq.length} clip${seq.length===1?'':'s'} · ${fmt(total())}${miss?` · ${miss} missing`:''}`}
+function renderTimeline(){const T=$('#tl');T.querySelectorAll('.seg,.empty').forEach(n=>n.remove());
+  if(!seq.length){const e=document.createElement('div');e.className='empty';e.textContent='No clips in the edit';T.insertBefore(e,$('#head'))}
+  seq.forEach((x,i)=>{const d=document.createElement('div');d.className='seg'+(x.u===sel?' sel':'');d.style.flex=`${Math.max(len(x),.05)} 0 0`;d.textContent=x.id;d.dataset.i=i;d.title=`${x.id} ${f2(len(x))} s`;T.insertBefore(d,$('#head'))});
+  if(!playing)$('#tc').textContent=`${fmt(0)} / ${fmt(total())}`}
+
+// ---------- trim ----------
+const tv=$('#tv'),inR=$('#inR'),outR=$('#outR');let trimPlay=false;
+const cur=()=>seq.find(x=>x.u===sel);
+function select(u){sel=u;renderAll();loadTrim()}
+function loadTrim(){const x=cur();const ok=x&&have(x.id);[inR,outR,$('#inHere'),$('#outHere'),$('#playTrim'),$('#resetTrim'),...document.querySelectorAll('[data-n]')].forEach(b=>b.disabled=!ok);
+  if(!ok){$('#trimId').textContent=x?`${x.id}: missing`:'select a row';tv.removeAttribute('src');tv.load();$('#trimLen').textContent='—';$('#barSel').style.width='0';return}
+  const d=CLIP[x.id].dur;$('#trimId').textContent=`#${seq.indexOf(x)+1} · ${x.id}`;inR.max=outR.max=d;inR.step=outR.step=FR();inR.value=x.in;outR.value=x.out;
+  if(tv.src!==CLIP[x.id].url){tv.src=CLIP[x.id].url;tv.addEventListener('loadedmetadata',()=>{tv.currentTime=x.in},{once:true})}else tv.currentTime=x.in;paintTrim()}
+function paintTrim(){const x=cur();if(!x||!have(x.id))return;const d=CLIP[x.id].dur;$('#inO').textContent=f2(x.in);$('#outO').textContent=f2(x.out);$('#trimLen').textContent=`${f2(len(x))} s of ${f2(d)}`;
+  $('#barSel').style.left=(100*x.in/d)+'%';$('#barSel').style.width=(100*(x.out-x.in)/d)+'%';$('#barHead').style.left=(100*Math.min(tv.currentTime||0,d)/d)+'%'}
+function trimChanged(){paintTrim();saveLocal();renderList();renderTimeline()}
+function setIn(v){const x=cur();if(!x)return;x.in=Math.max(0,Math.min(q(v),x.out-FR()));inR.value=x.in;tv.currentTime=x.in;trimChanged()}
+function setOut(v){const x=cur();if(!x)return;x.out=Math.min(CLIP[x.id].dur,Math.max(q(v),x.in+FR()));outR.value=x.out;tv.currentTime=Math.max(x.in,x.out-FR());trimChanged()}
+inR.addEventListener('input',()=>setIn(+inR.value));outR.addEventListener('input',()=>setOut(+outR.value));
+document.querySelectorAll('[data-n]').forEach(b=>b.addEventListener('click',()=>{const[w,n]=b.dataset.n.split(',');const x=cur();if(!x)return;w==='in'?setIn(x.in+n*FR()):setOut(x.out+n*FR())}));
+$('#inHere').addEventListener('click',()=>setIn(tv.currentTime));$('#outHere').addEventListener('click',()=>setOut(tv.currentTime));
+$('#resetTrim').addEventListener('click',()=>{const x=cur();if(!x)return;x.in=0;x.out=CLIP[x.id].dur;loadTrim();changed()});
+$('#playTrim').addEventListener('click',()=>{const x=cur();if(!x)return;stop();tv.currentTime=x.in;trimPlay=true;tv.play().catch(()=>{})});
+tv.addEventListener('timeupdate',paintTrim);tv.addEventListener('seeked',paintTrim);tv.addEventListener('pause',()=>{trimPlay=false});
+(function wt(){const x=cur();if(trimPlay&&x&&!tv.paused&&tv.currentTime>=x.out-0.02){tv.pause();trimPlay=false}requestAnimationFrame(wt)})();
+
+// ---------- player ----------
+const A=$('#va'),B=$('#vb');let front=A,back=B;
+function seekTo(v,t){return new Promise(res=>{const go=()=>{if(Math.abs(v.currentTime-t)<0.01){res();return}let done=false;const fin=()=>{if(!done){done=true;res()}};v.addEventListener('seeked',fin,{once:true});setTimeout(fin,1500);v.currentTime=t};if(v.readyState>=1)go();else v.addEventListener('loadedmetadata',go,{once:true})})}
+function prep(v,x){const u=CLIP[x.id].url;if(v.src!==u){v.src=u;v.load()}return seekTo(v,x.in)}
+async function startAt(i){tv.pause();pl=seq.filter(x=>have(x.id));const s=seq[i];i=Math.max(0,pl.indexOf(s));if(!pl.length)return toast(seq.length?'Open the folder with these takes first':'The edit is empty');[A,B].forEach(v=>v.pause());idx=i;playing=true;front.classList.remove('off');back.classList.add('off');await prep(front,pl[i]);front.play().catch(()=>{});preload();mark()}
+function preload(){const n=pl[idx+1];if(n)prep(back,n)}
+async function next(){idx++;if(idx>=pl.length){playing=false;front.pause();mark();return}[front,back]=[back,front];await prep(front,pl[idx]);front.classList.remove('off');back.classList.add('off');back.pause();front.play().catch(()=>{});preload();mark()}
+const offset=i=>pl.slice(0,i).reduce((a,x)=>a+len(x),0);
+let adv=false;const advance=()=>{if(adv)return;adv=true;next().finally(()=>adv=false)};
+(function watch(){if(playing&&pl[idx]&&!front.paused){const x=pl[idx];if(front.currentTime>=x.out-0.02)advance();const tot=pl.reduce((a,y)=>a+len(y),0)||1;const t=offset(idx)+Math.min(len(x),Math.max(0,front.currentTime-x.in));$('#tc').textContent=`${fmt(t)} / ${fmt(tot)}`;$('#head').style.left=(100*Math.min(t,tot)/tot)+'%'}requestAnimationFrame(watch)})();
+[A,B].forEach(v=>v.addEventListener('ended',()=>{if(v===front&&playing)advance()}));
+function mark(){document.querySelectorAll('.seg').forEach(s=>s.classList.toggle('now',playing&&pl[idx]&&seq[+s.dataset.i]===pl[idx]));document.querySelectorAll('.row').forEach(r=>r.classList.toggle('now',playing&&!!pl[idx]&&+r.dataset.u===pl[idx].u));$('#slate').textContent=pl[idx]?`${pl.length>1?(idx+1)+' · ':''}${pl[idx].id}`:'—'}
+function stop(){playing=false;[A,B].forEach(v=>v.pause());idx=-1;$('#head').style.left='0';mark()}
+function preview(id){stop();tv.pause();pl=[mk(id)];idx=0;playing=true;front.classList.remove('off');back.classList.add('off');prep(front,pl[0]).then(()=>front.play().catch(()=>{}));mark();window.scrollTo({top:$('.screen').offsetTop-20,behavior:'smooth'})}
+$('#play').addEventListener('click',()=>startAt(0));
+$('#pause').addEventListener('click',()=>{if(front.paused){if(idx>=0&&pl[idx]){front.play().catch(()=>{});playing=true}}else{front.pause();playing=false}});
+$('#fromSel').addEventListener('click',()=>{const k=seq.findIndex(x=>x.u===sel);startAt(k<0?0:k)});
+$('#tl').addEventListener('click',e=>{const s=e.target.closest('.seg');if(!s)return;const i=+s.dataset.i;sel=seq[i].u;renderAll();loadTrim();startAt(i)});
+
+// ---------- library ----------
+const nat=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true,sensitivity:'base'});
+function groupOrder(){const meta=Object.keys(META.groups);return [...ORDER].sort((a,b)=>{const ia=meta.indexOf(a),ib=meta.indexOf(b);if(ia>=0||ib>=0)return (ia<0?1e9:ia)-(ib<0?1e9:ib);return nat(a,b)})}
+const takesOf=g=>Object.keys(CLIP).filter(id=>CLIP[id].group===g).sort(nat);
+function renderBeats(){const root=$('#beats');root.innerHTML='';const inEdit=new Set(seq.map(x=>x.id));
+  const ids=Object.keys(CLIP);$('#libHint').textContent=ids.length?`${ids.length} takes. “Add” puts a take after the selected row, or at the end.`:'Open a folder of takes to fill the library.';
+  groupOrder().forEach(g=>{const opts=takesOf(g);if(!opts.length)return;
+    const b=document.createElement('section');b.className='beat';const place=(META.groups[g]&&META.groups[g].place)||'';
+    b.innerHTML=`<div class="beat-h"><h2>${esc(g)}</h2><span class="place">${esc(place)}</span></div>`;
+    const strip=document.createElement('div');strip.className='strip';
+    opts.forEach(id=>{const o=CLIP[id];const c=document.createElement('div');c.className='card';
+      c.innerHTML=`<img loading="lazy" src="${o.thumb||''}" alt="${esc(id)} still"><div class="r"><span class="id">${esc(id)}</span>${inEdit.has(id)?'<span class="chip in">in edit</span>':''}<span class="d">${o.dur.toFixed(1)} s</span></div>${o.label?`<div class="lab">${esc(o.label)}</div>`:''}${o.note?`<div class="note">${esc(o.note)}</div>`:''}<div class="acts"><button class="sm primary" type="button" data-a="add">Add</button><button class="sm" type="button" data-a="pv">Preview</button></div>`;
+      c.querySelector('.acts').addEventListener('click',e=>{const a=e.target.dataset.a;
+        if(a==='add'){const k=seq.findIndex(x=>x.u===sel);const it=mk(id);seq.splice(k<0?seq.length:k+1,0,it);sel=it.u;stop();changed();loadTrim();toast(`${id} added at position ${seq.indexOf(it)+1}`)}
+        if(a==='pv')preview(id)});
+      strip.appendChild(c)});
+    b.appendChild(strip);root.appendChild(b)})}
+function renderAll(){renderList();renderTimeline();renderBeats()}
+$('#loadAll').addEventListener('click',()=>{const ids=[];groupOrder().forEach(g=>takesOf(g).forEach(id=>ids.push(id)));if(!ids.length)return toast('Open a folder of takes first');seq=ids.map(id=>mk(id));sel=null;stop();changed();loadTrim()});
+$('#clear').addEventListener('click',()=>{if(!seq.length)return;saveVersion('Auto: before clearing',true);seq=[];sel=null;stop();changed();loadTrim()});
+
+// ---------- exports ----------
+const tcode=s=>{const nominal=Math.round(FPS);const fr=Math.round(s*FPS);const h=Math.floor(fr/(nominal*3600)),m=Math.floor(fr/(nominal*60))%60,sec=Math.floor(fr/nominal)%60,f=fr%nominal;return [h,m,sec,f].map(v=>String(v).padStart(2,'0')).join(':')};
+function edl(){let rec=3600,out=`TITLE: EDIT BENCH CUT\nFCM: NON-DROP FRAME\n\n`;seq.forEach((x,i)=>{const d=len(x);const reel=x.id.replace(/[^A-Za-z0-9]/g,'').slice(0,8).padEnd(8)||'AX      ';out+=`${String(i+1).padStart(3,'0')}  ${reel} AA/V  C        ${tcode(x.in)} ${tcode(x.out)} ${tcode(rec)} ${tcode(rec+d)}\n* FROM CLIP NAME: ${CLIP[x.id]?CLIP[x.id].name:x.id}\n\n`;rec+=d});return out}
+function csv(){let t=0;return 'order,take,group,in_s,out_s,duration_s,record_in_s,file\n'+seq.map((x,i)=>{const o=CLIP[x.id]||{};const r=[i+1,x.id,'"'+(o.group||'').replace(/"/g,'""')+'"',x.in.toFixed(3),x.out.toFixed(3),len(x).toFixed(3),t.toFixed(3),'"'+(o.name||'').replace(/"/g,'""')+'"'].join(',');t+=len(x);return r}).join('\n')+'\n'}
+const stamp=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`};
+function save(name,data){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'text/plain'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);toast('Saved '+name)}
+$('#dlEdl').addEventListener('click',()=>save(`edit_${stamp()}.edl`,edl()));
+$('#dlCsv').addEventListener('click',()=>save(`edit_${stamp()}.csv`,csv()));
+$('#copy').addEventListener('click',()=>{let t=0;const s='Edit list ('+fmt(total())+')\n'+seq.map((x,i)=>{const r=`${String(i+1).padStart(2)}. ${x.id}  in ${f2(x.in)}  out ${f2(x.out)}  (${f2(len(x))} s)  at ${fmt(t)}`;t+=len(x);return r}).join('\n');navigator.clipboard.writeText(s).then(()=>toast('Copied'),()=>toast('Copy blocked here'))});
+const project=name=>JSON.stringify({app:'edit-bench',format:1,name:name||'',saved:new Date().toISOString(),fps:FPS,total_s:+total().toFixed(3),items:seq.map(x=>({id:x.id,in:+x.in.toFixed(3),out:+x.out.toFixed(3),file:CLIP[x.id]?CLIP[x.id].name:undefined}))},null,1);
+$('#pjDl').addEventListener('click',()=>save(`edit_project_${stamp()}.json`,project('')));
+
+// ---------- versions ----------
+let vers=[];try{vers=JSON.parse(localStorage.getItem('benchVersions')||'[]')||[]}catch(e){vers=[]}
+const vSave=()=>{try{localStorage.setItem('benchVersions',JSON.stringify(vers))}catch(e){}};
+const same=items=>JSON.stringify(items.map(x=>[x.id,+(+x.in).toFixed(3),+(+x.out).toFixed(3)]))===JSON.stringify(plain().map(x=>[x.id,x.in,x.out]));
+let armDel=null;
+function saveVersion(name,quiet){if(!seq.length){if(!quiet)toast('The edit is empty');return}vers.unshift({id:'v'+Date.now().toString(36),name:name||('Version '+stamp().replace('_',' ')),created:new Date().toISOString(),total_s:+total().toFixed(3),items:plain()});vSave();renderVers();if(!quiet)toast('Saved “'+vers[0].name+'”')}
+function loadItems(items,msg){const it=valid(items);if(!it.length)return toast('Nothing to load');seq=it;sel=null;stop();changed();loadTrim();toast(msg)}
+function renderVers(){const L=$('#vlist');L.innerHTML='';if(!vers.length){L.innerHTML='<p class="hint">No saved versions yet.</p>';return}
+  vers.forEach(v=>{const r=document.createElement('div');r.className='vrow';const n=(v.items||[]).length;
+    r.innerHTML=`<div><b></b><span>${new Date(v.created).toLocaleString([], {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${n} clip${n===1?'':'s'} · ${fmt(v.total_s||0)}</span></div><div class="b"><button class="sm" type="button" data-a="load">Load</button><button class="sm${armDel===v.id?' warn':''}" type="button" data-a="del">${armDel===v.id?'Delete?':'✕'}</button></div>`;
+    r.querySelector('b').textContent=v.name;
+    r.querySelector('.b').addEventListener('click',e=>{const a=e.target.dataset.a;if(!a)return;
+      if(a==='load'){if(seq.length&&!same(v.items))saveVersion('Auto: before loading “'+v.name+'”',true);loadItems(v.items,'Loaded “'+v.name+'”')}
+      if(a==='del'){if(armDel!==v.id){armDel=v.id;renderVers();setTimeout(()=>{if(armDel===v.id){armDel=null;renderVers()}},4000);return}armDel=null;vers=vers.filter(y=>y.id!==v.id);vSave();renderVers()}});
+    L.appendChild(r)})}
+$('#vsave').addEventListener('click',()=>{saveVersion($('#vname').value.trim());$('#vname').value=''});
+$('#vname').addEventListener('keydown',e=>{if(e.key==='Enter')$('#vsave').click()});
+$('#pjIn').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const j=JSON.parse(await f.text());if(!Array.isArray(j.items))throw 0;if(j.fps){FPS=+j.fps;$('#fps').value=String(FPS)}if(seq.length&&!same(j.items))saveVersion('Auto: before opening '+f.name,true);loadItems(j.items,'Opened '+f.name+(j.items.some(x=>!have(x.id))?' (open the takes folder to play it)':''))}catch(_){toast('That file is not an edit bench project')}});
+
+renderAll();renderVers();loadTrim();
+</script>
+</body>
+</html>
