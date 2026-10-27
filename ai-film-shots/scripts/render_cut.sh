@@ -2,8 +2,9 @@
 # Render a cut ("bout-a-bout") from an edit list, one file per shot plus the joined cut.
 #
 # Usage: render_cut.sh CUT.csv MASTERS_DIR OUT_DIR [prores|h264|preview]
-#   CUT.csv      the edit bench CSV (columns: order,take,beat,in_s,out_s,...) or any CSV whose
-#                2nd, 4th and 5th columns are take, in (s), out (s). Header line is skipped.
+#   CUT.csv      the edit bench CSV (columns: order,take,group,in_s,out_s,...) or any CSV whose
+#                2nd, 4th and 5th columns are take, in (s), out (s). Header line is skipped;
+#                quoted fields (commas, quotes, Windows line endings) are handled.
 #   MASTERS_DIR  folder holding the masters named <take>_4K.mp4 (or <take>.mp4)
 #   OUT_DIR      gets shots/NN_<take>[_mirrored].<ext> and cut.<ext>
 #   format       prores (ProRes 4444, default) | h264 (4K MP4, CRF 17) | preview (1280 px MP4 for email)
@@ -23,22 +24,40 @@ case "$fmt" in
   *) echo "format must be prores, h264 or preview"; exit 1;;
 esac
 mkdir -p "$out/shots"; list="$out/shots/list.txt"; : > "$list.tmp"
+# Read the CSV with a real parser (quoted fields may hold commas or quotes); keep take, in, out.
+rows() {
+  awk 'function parse(line, f,   n, i, c, q, cur) {
+         n = 0; cur = ""; q = 0
+         for (i = 1; i <= length(line); i++) {
+           c = substr(line, i, 1)
+           if (q) { if (c == "\"") { if (substr(line, i+1, 1) == "\"") { cur = cur c; i++ } else q = 0 } else cur = cur c }
+           else if (c == "\"") q = 1
+           else if (c == ",") { f[++n] = cur; cur = "" }
+           else cur = cur c
+         }
+         f[++n] = cur; return n
+       }
+       { sub(/\r$/, ""); split("", f); parse($0, f)
+         if (f[1] == "" || f[1] == "order") next
+         printf "%s\037%s\037%s\n", f[2], f[4], f[5] }' "$1"
+}
 n=0
-while IFS=, read -r order take beat in_s out_s rest; do
-  case "$order" in ''|order) continue;; esac
+while IFS=$'\037' read -r take in_s out_s; do
   n=$((n+1)); nn=$(printf %02d "$n")
+  case "$in_s$out_s" in *[!0-9.]*|'') echo "Row $nn ($take): in/out must be seconds, got '$in_s' '$out_s'"; exit 1;; esac
   src="$masters/${take}_4K.mp4"; [ -f "$src" ] || src="$masters/$take.mp4"
   [ -f "$src" ] || { echo "No master for $take in $masters"; exit 1; }
   m=""; vf="scale=$w:$h:force_original_aspect_ratio=increase:flags=lanczos,crop=$w:$h,setsar=1,fps=24"
   case "$MIRROR" in *" $take "*) m="_mirrored"; vf="$vf,hflip";; esac
-  shot="$out/shots/${nn}_${take}${m}.$ext"; echo "file '$(basename "$shot")'" >> "$list.tmp"
+  safe=$(printf %s "$take" | tr -c "A-Za-z0-9._-" "_")   # shot file names stay plain, so the join list needs no escaping
+  shot="$out/shots/${nn}_${safe}${m}.$ext"; echo "file '$(basename "$shot")'" >> "$list.tmp"
   [ "${JOIN:-0}" = 1 ] && continue
   if [ -n "${ONLY:-}" ]; then case " $ONLY " in *" $nn "*) ;; *) continue;; esac; fi
   dur=$(awk -v a="$in_s" -v b="$out_s" 'BEGIN{printf "%.3f", b-a}')
   echo "shot $nn $take$m  in $in_s  dur $dur"
   ffmpeg -nostdin -hide_banner -loglevel error -y -ss "$in_s" -i "$src" -t "$dur" -vf "$vf" \
     -af "aresample=48000,aformat=channel_layouts=stereo" "${venc[@]}" "${aenc[@]}" "$shot"
-done < "$csv"
+done < <(rows "$csv")
 mv "$list.tmp" "$list"
 if [ -n "${ONLY:-}" ] && [ "${JOIN:-0}" != 1 ]; then echo "Rendered rows: $ONLY. Run again with JOIN=1 to join."; exit 0; fi
 ffmpeg -nostdin -hide_banner -loglevel error -stats -y -f concat -safe 0 -i "$list" -c copy "$out/cut.$ext"
