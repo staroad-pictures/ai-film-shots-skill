@@ -1,5 +1,7 @@
 # AI film shots - a Claude skill
 
+**Website:** https://staroad-pictures.github.io/ai-film-shots-skill/ · **Edit bench:** https://staroad-pictures.github.io/ai-film-shots-skill/edit-bench/
+
 A Claude skill for making new or replacement shots of a film with AI video, driven from Claude:
 
 - **Higgsfield** (Seedance 2.5): drafts, video edits, extensions, 1080p finish, 4K upscale

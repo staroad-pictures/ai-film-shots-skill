@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI film shots · Claude skill and edit bench</title>
+<meta name="description" content="A Claude skill for making and delivering film shots with Higgsfield and Magnific, and a free in-browser edit bench for building cuts from your takes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#121110;--panel:#1b1a18;--raise:#252320;--line:#34312c;--fg:#ece6da;--dim:#a59d8f;--faint:#6f685d;--torch:#e0a24a;--torch-dim:#5a4321;--moon:#8fa7bf;
+  --display:"Cormorant Garamond",Georgia,serif;--body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:16px;line-height:1.55;padding:0 16px 64px}
+a{color:var(--torch)}a:hover{color:#f0b866}
+.wrap{max-width:1040px;margin:0 auto}
+header{padding:56px 0 28px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--torch)}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(40px,7vw,72px);line-height:1.02;margin:10px 0 16px;letter-spacing:-.01em}
+.lede{font-size:clamp(17px,2.2vw,20px);color:var(--dim);max-width:62ch;margin:0}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.btn{display:inline-block;text-decoration:none;font-weight:500;padding:11px 18px;border-radius:8px;border:1px solid var(--line);background:var(--raise);color:var(--fg)}
+.btn.primary{background:var(--torch);border-color:var(--torch);color:#1a1206}
+.btn:hover{border-color:var(--faint);color:var(--fg)}.btn.primary:hover{color:#1a1206;filter:brightness(1.06)}
+.shot{margin:18px 0 8px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#000}
+.shot img{display:block;width:100%;height:auto}
+.cap{font-size:13px;color:var(--faint);margin:0 0 40px}
+h2{font-family:var(--display);font-weight:600;font-size:32px;margin:48px 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}
+.card h3{font-family:var(--display);font-weight:600;font-size:24px;margin:0 0 8px}
+.card p{margin:0 0 10px;color:var(--dim)}
+.card ul{margin:0;padding-left:18px;color:var(--dim)}.card li{margin:4px 0}
+ol.steps{padding-left:22px}ol.steps li{margin:8px 0}
+code{font-family:var(--mono);font-size:.9em;background:var(--raise);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+td{border-top:1px solid var(--line);padding:10px 8px;vertical-align:top}td:first-child{white-space:nowrap}
+.note{border-left:3px solid var(--moon);padding:4px 0 4px 14px;color:var(--dim);margin:18px 0}
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:var(--faint);font-size:14px}
+@media (max-width:560px){header{padding-top:36px}td:first-child{white-space:normal}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Claude skill · edit bench · open source</div>
+    <h1>AI film shots</h1>
+    <p class="lede">Make new or replacement shots for a film with AI video, driven from Claude, using Higgsfield and Magnific. Then cut them together in a free edit bench that runs in your browser.</p>
+    <div class="cta">
+      <a class="btn primary" href="edit-bench/">Open the edit bench</a>
+      <a class="btn" href="https://github.com/staroad-pictures/ai-film-shots-skill">The code on GitHub</a>
+      <a class="btn" href="https://github.com/staroad-pictures/ai-film-shots-skill/tree/main/ai-film-shots">The Claude skill</a>
+    </div>
+  </header>
+
+  <div class="shot"><img src="edit-bench/screenshot.jpg" alt="The edit bench: a player, a timeline of the cut, the edit list and the trim panel" width="1920" height="2340" loading="lazy"></div>
+  <p class="cap">The edit bench, shown with test clips.</p>
+
+  <h2>Two tools</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>The skill</h3>
+      <p>Instructions that make Claude a careful assistant on a film:</p>
+      <ul>
+        <li>upload the right references</li>
+        <li>make cheap drafts</li>
+        <li>check every take against your continuity rules</li>
+        <li>finish in 1080p, upscale to 4K, master in ProRes 4444</li>
+        <li>render the cut, one file per shot plus the joined cut</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>The edit bench</h3>
+      <p>A single web page, with no install and no upload: your clips stay on your computer.</p>
+      <ul>
+        <li>open a folder of takes</li>
+        <li>add any take in any order</li>
+        <li>trim each one to the frame</li>
+        <li>play the cut end to end</li>
+        <li>export an EDL (CMX3600), a CSV or a project file</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Use the edit bench</h2>
+  <ol class="steps">
+    <li>Open <a href="edit-bench/">the edit bench</a> in Chrome, Safari or Firefox. You can also download <code>edit-bench/index.html</code> and open it offline.</li>
+    <li>Click <b>Open folder</b> and pick your takes, or drop video files onto the page.
+      <ul>
+        <li>Takes are grouped by subfolder, or by the letters their name starts with (<code>A1</code>, <code>A2</code> → A).</li>
+        <li>An optional <code>bench.json</code> can name the groups and describe takes: see <a href="edit-bench/bench.example.json">the example</a>.</li>
+      </ul>
+    </li>
+    <li>Click <b>Add</b> on the takes you want. Then reorder them, select a row to trim it, and play the cut.</li>
+    <li>Save named versions as you go, then export the EDL for your editing software, or the CSV for the render script.</li>
+  </ol>
+  <p class="note">Browsers play MP4 (H.264) everywhere and MOV in Safari. For ProRes masters, make light previews first with <code>scripts/make_preview.sh</code>. Your edit and versions are kept in your browser; after a reload, open the folder again so the clips can play.</p>
+
+  <h2>Use the skill</h2>
+  <ol class="steps">
+    <li>Get Claude, plus a paid Higgsfield and/or Magnific plan, and add them to Claude as connectors.
+      <ul>
+        <li>Higgsfield: <code>https://mcp.higgsfield.ai/mcp</code></li>
+        <li>Magnific: <code>https://mcp.magnific.com</code></li>
+        <li>Full steps: <a href="https://github.com/staroad-pictures/ai-film-shots-skill/blob/main/ai-film-shots/references/setup.md">setup guide</a>.</li>
+      </ul>
+    </li>
+    <li>Zip the <code>ai-film-shots</code> folder and add it to Claude as a skill.</li>
+    <li>In a new chat: <i>“Use the ai-film-shots skill. Help me write the continuity file for my film.”</i></li>
+  </ol>
+
+  <h2>Scripts</h2>
+  <p style="color:var(--dim);margin-top:0">They need ffmpeg (<code>brew install ffmpeg</code> on a Mac).</p>
+  <table>
+    <tr><td><code>contact_sheet.sh</code></td><td>One image with stamped frames of a take, to judge it at a glance</td></tr>
+    <tr><td><code>encode_prores4444.sh</code></td><td>ProRes 4444 master, optionally mirrored (a wound on the wrong side) and conformed to the frame size</td></tr>
+    <tr><td><code>render_cut.sh</code></td><td>Frame-accurate shots from the edit bench's CSV, then the joined cut, in ProRes, 4K MP4 or a light preview</td></tr>
+    <tr><td><code>make_preview.sh</code></td><td>Light preview and thumbnail of a take, for the edit bench</td></tr>
+  </table>
+
+  <footer>Made while redoing shots of a family feature film. MIT licence · © 2026 Staroad Pictures · <a href="https://github.com/staroad-pictures/ai-film-shots-skill">GitHub</a></footer>
+</div>
+</body>
+</html>
