@@ -48,7 +48,7 @@ Write the prompt wording to `references/seedance_camera_notes.md`, which records
 - Dutch angles: "dutch tilt" alone does nothing. "The camera body is canted about 20 degrees; the roll belongs to the camera only" works and tends to overshoot; small angles are ignored. For a subtle or exact cant, rotate in post from the 4K.
 - Shot timings inside a take are approximate (up to about 1 s off). Fast rhythm and exact cut points are made in the edit from longer takes.
 - "Handheld" alone barely moves the camera on a still subject; visible shake comes with movement (walking, push-ins). Leave the word out for a still frame.
-- Blinking, only for close-ups held on a still face for more than 3 s (a frozen face shows most there): ask with a number and a speed ("he blinks quickly once or twice in the shot"), make 2 takes, keep the calm one. It worked in about half the takes. Never write "blinks naturally" alone (it gave a nervous flutter in both takes). Leave blinking out of wide shots and moving characters.
+- Direct the moment, not the mechanics. Every shot with a character says what just happened, what they feel or want, and what comes next; a neutral "he stands and looks past the lens" gives a mannequin. Keep past events in the past ("a moment ago...") and say what the shot shows now, or the model acts them out. When the shot follows straight on from another, also give that shot as a video reference or extend it, so its pace carries over. Asking for blinks ("he blinks quickly once or twice") is only a fix for a take that still comes out frozen; never "blinks naturally" alone.
 
 ## 5. Test before the real shots
 
