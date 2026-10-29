@@ -95,6 +95,8 @@ def main():
     ap.add_argument("--fps", type=float, default=12, help="analysis frame rate")
     ap.add_argument("--width", type=int, default=480, help="analysis width in pixels")
     ap.add_argument("--hfov", type=float, default=60, help="assumed horizontal field of view, for degrees/s")
+    ap.add_argument("--offset", type=float, default=0, help="seconds added to every time (when the clip is a part of a longer film)")
+    ap.add_argument("--progress", action="store_true", help="print progress every 100 s of analysed footage")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
 
@@ -109,7 +111,13 @@ def main():
     h = int(round(H0 * w / W0 / 2) * 2)
     deg_per_px = a.hfov / w
 
-    frames, times, grays, hists, thumbs, luma, warm, sat = [], [], [], [], [], [], [], []
+    # Stream the clip: keep only small per-frame data, so a feature film fits in memory.
+    #   jpgs: small JPEG of each analysed frame (contact sheets, cant); motion: frame-to-frame transform
+    orb = cv2.ORB_create(600)
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    jw = 240; jh = int(round(jw * h / w / 2) * 2)
+    jpgs, times, hists, thumbs, luma, warm, sat, motion, cants = [], [], [], [], [], [], [], [], []
+    prev_g = None
     i = 0
     while True:
         ok = cap.grab()
@@ -121,18 +129,25 @@ def main():
                 break
             f = cv2.resize(f, (w, h), interpolation=cv2.INTER_AREA)
             g = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
-            frames.append(f); grays.append(g); times.append(i / src_fps); hists.append(hist(f))
+            times.append(a.offset + i / src_fps); hists.append(hist(f))
             thumbs.append(cv2.resize(g, (64, max(8, int(64 * h / w)))).astype(np.float32))
+            jpgs.append(cv2.imencode(".jpg", cv2.resize(f, (jw, jh), interpolation=cv2.INTER_AREA), [cv2.IMWRITE_JPEG_QUALITY, 80])[1].tobytes())
             luma.append(float(g.mean()))
             b, gg, r = [float(c.mean()) for c in cv2.split(f)]
             warm.append(r - b)
             sat.append(float(cv2.cvtColor(f, cv2.COLOR_BGR2HSV)[:, :, 1].mean()))
+            motion.append(global_motion(prev_g, g, orb, bf) if prev_g is not None else None)
+            cants.append(horizon_cant(g) if len(times) % 4 == 1 else None)  # every 4th frame is enough
+            prev_g = g
+            if a.progress and len(times) % 1200 == 0:
+                print(f"  {times[-1]:.0f} s", file=sys.stderr, flush=True)
         i += 1
     cap.release()
     duration = (n_src or i) / src_fps
-    n = len(frames)
+    n = len(times)
     if n < 2:
         sys.exit("Clip too short to analyse")
+    frame = lambda k: cv2.imdecode(np.frombuffer(jpgs[k], np.uint8), cv2.IMREAD_COLOR)
 
     # --- cuts: a colour-histogram jump, or a sharp one-frame spike in pixel difference
     #     (motion changes pixels over many frames; a cut changes them in one)
@@ -152,20 +167,18 @@ def main():
                 cuts[-1] = k
         else:
             cuts.append(k)
-    flashes = [round(times[k], 2) for k in range(n) if luma[k] > 235 or luma[k] < 8]
+    flashes = [round(times[k], 2) for k in range(n) if luma[k] > 235]
     bounds = [0] + cuts + [n]
 
-    # --- per-shot motion
-    orb = cv2.ORB_create(600)
-    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    # --- per-shot motion (transforms across a cut are never used: k runs inside the shot)
     shots = []
     for s in range(len(bounds) - 1):
         a0, a1 = bounds[s], bounds[s + 1]
         t0 = times[a0]
-        t1 = times[a1] if a1 < n else duration
+        t1 = times[a1] if a1 < n else a.offset + duration
         dxs, dys, scs, rots = [], [], [], []
         for k in range(a0 + 1, a1):
-            m = global_motion(grays[k - 1], grays[k], orb, bf)
+            m = motion[k]
             # drop implausible frame-to-frame jumps (bad matches, hidden cuts); whips are caught by dx alone
             if m and abs(m[0]) < 0.5 * w and abs(m[1]) < 0.4 * h:
                 dxs.append(m[0]); dys.append(m[1])
@@ -187,7 +200,8 @@ def main():
             pan = tilt = zoom = roll = shake = 0.0
             whip = False
         mid = (a0 + a1 - 1) // 2
-        cant = horizon_cant(grays[mid])
+        cs = [c for c in cants[a0:a1] if c is not None]
+        cant = float(np.median(cs)) if cs else None
         seg = slice(a0, a1)
         sh = dict(shot=s + 1, start_s=round(t0, 3), end_s=round(t1, 3), duration_s=round(dur, 3),
                   pan_deg_s=round(pan, 1), tilt_deg_s=round(tilt, 1), zoom_pct=round(zoom, 1),
@@ -233,8 +247,10 @@ def main():
     with open(os.path.join(a.out, "summary.json"), "w") as f:
         json.dump(summary, f, indent=1)
 
-    # --- contact sheets: 6 shots per row, 3 frames per shot (first, middle, last)
+    # --- contact sheets: 2 shots per row, 3 frames per shot (first, middle, last)
     tw = 200; th = int(tw * h / w)
+    def tc(t):
+        return f"{int(t // 3600)}:{int(t % 3600 // 60):02d}:{t % 60:05.2f}" if a.offset or duration >= 600 else f"{t:.2f}s"
     per_sheet = 24
     for sheet_i in range(0, len(shots), per_sheet):
         chunk = shots[sheet_i:sheet_i + per_sheet]
@@ -247,8 +263,8 @@ def main():
             picks = [a0, (a0 + a1 - 1) // 2, a1 - 1]
             x0 = 8 + (j % cols) * cell_w; y0 = 8 + (j // cols) * cell_h
             for q, k in enumerate(picks):
-                img[y0 + 22:y0 + 22 + th, x0 + q * tw:x0 + (q + 1) * tw] = cv2.resize(frames[k], (tw, th))
-            label = f"#{sh['shot']}  {sh['start_s']:.2f}s  {sh['duration_s']:.2f}s  {sh['motion']}"
+                img[y0 + 22:y0 + 22 + th, x0 + q * tw:x0 + (q + 1) * tw] = cv2.resize(frame(k), (tw, th))
+            label = f"#{sh['shot']}  {tc(sh['start_s'])}  {sh['duration_s']:.2f}s  {sh['motion']}"
             cv2.putText(img, label[:70], (x0, y0 + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (230, 230, 230), 1, cv2.LINE_AA)
         cv2.imwrite(os.path.join(a.out, f"sheet_{sheet_i // per_sheet + 1:02d}.jpg"), img, [cv2.IMWRITE_JPEG_QUALITY, 85])
 

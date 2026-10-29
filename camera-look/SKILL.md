@@ -48,6 +48,7 @@ Write the prompt wording to `references/seedance_camera_notes.md`, which records
 - Dutch angles: "dutch tilt" alone does nothing. "The camera body is canted about 20 degrees; the roll belongs to the camera only" works and tends to overshoot; small angles are ignored. For a subtle or exact cant, rotate in post from the 4K.
 - Shot timings inside a take are approximate (up to about 1 s off). Fast rhythm and exact cut points are made in the edit from longer takes.
 - "Handheld" alone barely moves the camera on a still subject; visible shake comes with movement (walking, push-ins). Leave the word out for a still frame.
+- Still characters look stoic unless they blink. Ask with a number and a speed ("he blinks quickly once or twice in the shot"); "blinks naturally" alone gives a nervous flutter. Make 2 takes and keep the calm one.
 
 ## 5. Test before the real shots
 
