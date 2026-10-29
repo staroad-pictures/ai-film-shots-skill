@@ -1,8 +1,10 @@
-# AI film shots - a Claude skill
+# AI film shots - Claude skills
 
 **Website:** https://staroad-pictures.github.io/ai-film-shots-skill/ · **Edit bench:** https://staroad-pictures.github.io/ai-film-shots-skill/edit-bench/
 
-A Claude skill for making new or replacement shots of a film with AI video, driven from Claude:
+Two Claude skills and an edit bench for making film shots with AI video.
+
+**`ai-film-shots`** makes new or replacement shots of a film, driven from Claude:
 
 - **Higgsfield** (Seedance 2.5): drafts, video edits, extensions, 1080p finish, 4K upscale
 - **Magnific**: Seedance Pro 2.5 multi-shot, Kling 4, Aleph 2, voice isolation and cloning
@@ -10,6 +12,15 @@ A Claude skill for making new or replacement shots of a film with AI video, driv
 and the dull but essential part around them: a continuity file to check every take against, frame sheets, ProRes 4444 masters, and rendering an edit list (CSV) into a delivered cut, one file per shot plus the joined cut.
 
 It was written while redoing shots of a family feature film with Claude, Higgsfield and Magnific over a weekend, and collects what worked and what bit us.
+
+## Camera look skill
+
+**`camera-look`** turns a reference (a scene, a trailer, an ad, your own cut) into a measured "look pack" and writes Seedance 2.5 prompts in that camera language:
+
+- `scripts/analyze_reference.py` measures the reference: cuts and shot lengths, handheld or locked, push-ins and pull-outs, pans, tilts, whips, Dutch angles, brightness and warmth, plus contact sheets of every shot.
+- Claude reads the sheets for what numbers cannot give (shot sizes, lens height, staging, light sources) and fills in a look pack: house rules, principles with prompt wording, generation plans, rhythm for the edit.
+- `scripts/compare_takes.py` checks generated takes against the reference.
+- The prompt wording follows [our own A/B tests of Seedance 2.5](camera-look/references/seedance_camera_notes.md) (prompts and frame strips in [`tests/`](tests/camera-look-2026-10-29/)). Some findings: "dutch tilt" alone does nothing, small cants are ignored, a push-in needs a named end and a limit, more than one camera move per 4 s or so breaks the shot, and shot timings inside a take are only approximate.
 
 ## Edit bench
 
@@ -28,10 +39,12 @@ Browsers play MP4 (H.264) everywhere and MOV in Safari. For ProRes masters, make
 ## Install
 
 1. Set up Claude, Higgsfield and Magnific: see [`ai-film-shots/references/setup.md`](ai-film-shots/references/setup.md).
-2. Zip the `ai-film-shots` folder (or download the zip from Releases) and add it to Claude as a skill.
-3. In a new chat: *"Use the ai-film-shots skill. Help me write the continuity file for my film."*
+2. Zip the `ai-film-shots` folder, and the `camera-look` folder if you want it, and add each to Claude as a skill.
+3. In a new chat: *"Use the ai-film-shots skill. Help me write the continuity file for my film."* Or, with a reference clip attached: *"Use the camera-look skill. Make a look pack from this clip."*
 
-## Scripts (need ffmpeg)
+## Scripts
+
+`ai-film-shots/scripts` need ffmpeg; `camera-look/scripts` need Python with numpy and OpenCV.
 
 | Script | What it does |
 | --- | --- |
@@ -39,6 +52,8 @@ Browsers play MP4 (H.264) everywhere and MOV in Safari. For ProRes masters, make
 | `scripts/encode_prores4444.sh IN [OUT] [--mirror] [--size WxH]` | ProRes 4444 master, optionally mirrored and conformed |
 | `scripts/render_cut.sh CUT.csv MASTERS/ OUT/ [prores\|h264\|preview]` | Frame-accurate shots from an edit list, then the joined cut |
 | `scripts/make_preview.sh IN.mp4 ID [DIR]` | 720 px preview and thumbnail of a take |
+| `camera-look/scripts/analyze_reference.py IN.mp4 OUT/` | Cut rhythm, camera motion, cant, light and contact sheets of a reference |
+| `camera-look/scripts/compare_takes.py REF/ TAKE/...` | Compares generated takes with the reference |
 | `edit-bench/index.html` | The edit bench (see above) |
 
 ## Licence

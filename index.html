@@ -43,23 +43,24 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
 <body>
 <div class="wrap">
   <header>
-    <div class="eyebrow">Claude skill · edit bench · open source</div>
+    <div class="eyebrow">Claude skills · edit bench · open source</div>
     <h1>AI film shots</h1>
-    <p class="lede">Make new or replacement shots for a film with AI video, driven from Claude, using Higgsfield and Magnific. Then cut them together in a free edit bench that runs in your browser.</p>
+    <p class="lede">Make new or replacement shots for a film with AI video, driven from Claude, using Higgsfield and Magnific. Give them the camera language of a reference film. Then cut them together in a free edit bench that runs in your browser.</p>
     <div class="cta">
       <a class="btn primary" href="edit-bench/">Open the edit bench</a>
       <a class="btn" href="https://github.com/staroad-pictures/ai-film-shots-skill">The code on GitHub</a>
-      <a class="btn" href="https://github.com/staroad-pictures/ai-film-shots-skill/tree/main/ai-film-shots">The Claude skill</a>
+      <a class="btn" href="https://github.com/staroad-pictures/ai-film-shots-skill/tree/main/ai-film-shots">The shots skill</a>
+      <a class="btn" href="https://github.com/staroad-pictures/ai-film-shots-skill/tree/main/camera-look">The camera-look skill</a>
     </div>
   </header>
 
   <div class="shot"><img src="edit-bench/screenshot.jpg" alt="The edit bench: a player, a timeline of the cut, the edit list and the trim panel" width="1920" height="2340" loading="lazy"></div>
   <p class="cap">The edit bench, shown with test clips.</p>
 
-  <h2>Two tools</h2>
+  <h2>Three tools</h2>
   <div class="grid">
     <div class="card">
-      <h3>The skill</h3>
+      <h3>The shots skill</h3>
       <p>Instructions that make Claude a careful assistant on a film:</p>
       <ul>
         <li>upload the right references</li>
@@ -67,6 +68,17 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li>check every take against your continuity rules</li>
         <li>finish in 1080p, upscale to 4K, master in ProRes 4444</li>
         <li>render the cut, one file per shot plus the joined cut</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>The camera-look skill</h3>
+      <p>Give it a reference clip; it measures and describes the camera language:</p>
+      <ul>
+        <li>cuts and shot lengths</li>
+        <li>handheld, push-ins, pans, Dutch angles</li>
+        <li>light and colour, with contact sheets</li>
+        <li>a look pack with tested Seedance 2.5 wording</li>
+        <li>a check of your takes against the reference</li>
       </ul>
     </div>
     <div class="card">
@@ -105,17 +117,30 @@ footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:v
         <li>Full steps: <a href="https://github.com/staroad-pictures/ai-film-shots-skill/blob/main/ai-film-shots/references/setup.md">setup guide</a>.</li>
       </ul>
     </li>
-    <li>Zip the <code>ai-film-shots</code> folder and add it to Claude as a skill.</li>
+    <li>Zip the <code>ai-film-shots</code> folder, and the <code>camera-look</code> folder if you want it, and add each to Claude as a skill.</li>
     <li>In a new chat: <i>“Use the ai-film-shots skill. Help me write the continuity file for my film.”</i></li>
+    <li>For a look: attach a reference clip and say <i>“Use the camera-look skill. Make a look pack from this clip.”</i></li>
   </ol>
 
+  <h2>What we learned testing Seedance 2.5</h2>
+  <p style="color:var(--dim);margin-top:0">Two takes per wording, measured and checked frame by frame. <a href="https://github.com/staroad-pictures/ai-film-shots-skill/blob/main/camera-look/references/seedance_camera_notes.md">All results</a> · <a href="https://github.com/staroad-pictures/ai-film-shots-skill/tree/main/tests/camera-look-2026-10-29">prompts and frames</a>.</p>
+  <table>
+    <tr><td>Push-ins</td><td>Name where the move ends and add a limit (“never closer than chest height”). Expect one shot size either way.</td></tr>
+    <tr><td>Dutch angles</td><td>“Dutch tilt” alone does nothing; “the camera body is canted about 20 degrees” works and overshoots; small angles are ignored. Rotate in post for a subtle cant.</td></tr>
+    <tr><td>Camera moves</td><td>About one move per 4 seconds. Five moves in 8 seconds made the actor jump and props appear.</td></tr>
+    <tr><td>Timing</td><td>Cuts inside a take land up to about a second off. Make exact cuts in the edit.</td></tr>
+    <tr><td>Handheld</td><td>The word barely moves the camera on a still subject; movement in the scene brings the shake.</td></tr>
+  </table>
+
   <h2>Scripts</h2>
-  <p style="color:var(--dim);margin-top:0">They need ffmpeg (<code>brew install ffmpeg</code> on a Mac).</p>
+  <p style="color:var(--dim);margin-top:0">The shots scripts need ffmpeg (<code>brew install ffmpeg</code> on a Mac); the camera-look scripts need Python with numpy and OpenCV.</p>
   <table>
     <tr><td><code>contact_sheet.sh</code></td><td>One image with stamped frames of a take, to judge it at a glance</td></tr>
     <tr><td><code>encode_prores4444.sh</code></td><td>ProRes 4444 master, optionally mirrored (a wound on the wrong side) and conformed to the frame size</td></tr>
     <tr><td><code>render_cut.sh</code></td><td>Frame-accurate shots from the edit bench's CSV, then the joined cut, in ProRes, 4K MP4 or a light preview</td></tr>
     <tr><td><code>make_preview.sh</code></td><td>Light preview and thumbnail of a take, for the edit bench</td></tr>
+    <tr><td><code>analyze_reference.py</code></td><td>Cut rhythm, camera motion, cant, light and contact sheets of a reference clip</td></tr>
+    <tr><td><code>compare_takes.py</code></td><td>Compares generated takes with the reference look</td></tr>
   </table>
 
   <footer>Made while redoing shots of a family feature film. MIT licence · © 2026 Staroad Pictures · <a href="https://github.com/staroad-pictures/ai-film-shots-skill">GitHub</a></footer>
